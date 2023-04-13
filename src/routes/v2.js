@@ -58,7 +58,6 @@ async function handleDelete(req, res,next) {
   catch(e){
     next(e)
   }
-
 }
 
 
