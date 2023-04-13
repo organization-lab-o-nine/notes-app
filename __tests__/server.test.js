@@ -14,9 +14,9 @@ afterAll(async() => {
 });
 
 let testUser = {
-    username: 'editor',
-    password: 'editorpw',
-    role: 'editor'
+    username: 'user',
+    password: 'user',
+    role: 'user'
 }
 
 let admin = {
@@ -42,7 +42,7 @@ describe('Does the AUTH routes work', () => {
     adminToken = adminSignup.body.token;
 
     expect(response.status).toEqual(201);
-    expect(adminSignup.status).toEqual(201)
+    expect(adminSignup.status).toEqual(201);
     expect(response.body.token).toBeTruthy();
   })
 
@@ -50,7 +50,7 @@ describe('Does the AUTH routes work', () => {
   async() => {
     const response = await request
     .post('/signin')
-    .auth('editor', 'editorpw');
+    .auth('user', 'user');
     token = response.body.token;
     expect(response.status).toEqual(200);
     expect(token).toBeTruthy();
@@ -59,89 +59,49 @@ describe('Does the AUTH routes work', () => {
 
 describe('Testing V1 - Unauthenticated API', () => {
 
-  test('POST: Should add an item to the DB and returns an object with the added item', 
+  test('POST: An unauthenticated user should NOT be able to do anything more than read contents', 
   async() => {
     const response = await request
-    .post('/api/v1/clothes')
+    .post('/api/v1/note')
     .send({
-      name: "test-dress",
-      color: "red",
-      size: "XL"
+      title: "TEST",
+      content: "This is a test"
     });
-    expect(response.status).toEqual(201);
-    expect(response.body.name).toBe('test-dress');
+    expect(response.status).toEqual(404);
   })
 
-  test('GET: Should /api/v1/:model returns a list of :model items', 
+  test('GET: an unauthenticated user should be able to read published vents', 
   async() => {
     const response = await request
-    .get('/api/v1/clothes');
-    // console.log(response)
-    expect(response.status).toEqual(200)
-    expect(response._body[0].name).toBe('test-dress')
-  })
+    .get('/api/v1/note')
+    expect(response.status).toEqual(200);
+    });
 
-  test('GET Should /api/v1/:model/ID returns a single item by ID.', 
-  async() => {
-    const response = await request
-    .get('/api/v1/clothes/1');
-    // console.log(response)
-    expect(response.status).toEqual(200)
-    expect(response._body.id).toEqual(1)
-  })
-
-  test('PUT Should /api/v1/:model/ID returns a single, updated item by ID', async()=> {
-    const response = await request
-    .put('/api/v1/clothes/1')
-    .send({
-      name: "test-dress-altered",
-      color: "red",
-      size: "XL"
-    })
-    // console.log(response._body);
-    expect(response.status).toEqual(200)
-    expect(response._body.name).toEqual('test-dress-altered');
-    expect(response._body.id).toEqual(1);
-  });
-
-  test('DELETE /api/v1/:model/ID returns an empty object. Subsequent GET for the same ID should result in nothing found', async() => {
-    const response = await request
-    .delete('/api/v1/clothes/1')
-
-    const getResponse = await request.get('/api/v1/clothes/1')
-
-    // console.log(getResponse.body);
-    expect(response.status).toEqual(200)
-    expect(response.body).toBe(1);
-    expect(getResponse.body).not.toBeTruthy
-  })
-
-})
+});
 
 describe('V2 (Authenticated API) routes', ()=>{
 
   test('POST /api/v2/:model which adds an item to the DB and returns an object with the added item', async ()=> {
     const response = await request
-    .post('/api/v2/clothes')
+    .post('/api/v2/note')
     // .auth( testUser.username, testUser.password )
-    .set('Authorization', `Bearer ${token}`)
+    .set('Authorization', `Bearer ${adminToken}`)
     .send({
-      name: "test-dress-auth",
-      color: "red",
-      size: "XL"
+      title: "TEST",
+      content: "this is a test string"
     })
 
     // console.log(response.body)
     expect(response.status).toEqual(201)
-    expect(response.body.name).toBe('test-dress-auth')
+    expect(response.body.title).toBe('TEST')
   })
 
   test('GET /api/v2/:model with a bearer token that has read permissions returns a list of :model items', async ()=> {
     // console.log(token)
     const response = await request
-    .get('/api/v2/clothes')
+    .get('/api/v2/note')
     // .auth( testUser.username, testUser.password )
-    .set('Authorization', `Bearer ${token}`)
+    .set('Authorization', `Bearer ${adminToken}`)
 
     // console.log(response.body)
     expect(response.status).toEqual(200)
@@ -151,39 +111,38 @@ describe('V2 (Authenticated API) routes', ()=>{
   test('GET /api/v2/:model/ID with a bearer token that has read permissions returns a single item by ID.', async ()=> {
     // console.log(token)
     const response = await request
-    .get('/api/v2/clothes/2')
-    .set('Authorization', `Bearer ${token}`)
+    .get('/api/v2/note/1')
+    .set('Authorization', `Bearer ${adminToken}`)
 
-    // console.log(response.body)
+    console.log(response.body)
     expect(response.status).toEqual(200)
-    expect(response.body.id).toBe(2)
+    expect(response.body.id).toBe(1)
   })
 
   test('PUT /api/v2/:model/ID with a bearer token that has update permissions returns a single, updated item by ID', async () => {
     const response = await request
-    .put('/api/v2/clothes/2')
-    .set('Authorization',  `Bearer ${token}`)
+    .put('/api/v2/note/1')
+    .set('Authorization',  `Bearer ${adminToken}`)
     .send({
-      name: "test-dress-auth-altered",
-      color: "red",
-      size: "XL"
+      title: "TEST",
+      subtitle: 'this is a subtitle',
+      content: "this is a test string"
     })
     expect(response.status).toEqual(200)
-    expect(response.body.id).toBe(2)
-    expect(response.body.name).toEqual('test-dress-auth-altered');
+    expect(response.body.id).toBe(1)
+    expect(response.body.title).toEqual('TEST');
   })
 
   test('DELETE /api/v2/:model/ID with a bearer token that has delete permissions returns an empty object. Subsequent GET for the same ID should result in nothing found.', async () => {
     const editorResponse = await request
-    .delete('/api/v2/clothes/2')
+    .delete('/api/v2/note/1')
     .set('Authorization',  `Bearer ${token}`)
 
     const adminReponse = await request
-    .delete('/api/v2/clothes/2')
+    .delete('/api/v2/note/1')
     .set('Authorization', `Bearer ${adminToken}`)
 
-    console.log(adminReponse)
-
+    // console.log(adminReponse)
     expect(editorResponse.status).toEqual(500)
     expect(adminReponse.status).toEqual(200)
   })
